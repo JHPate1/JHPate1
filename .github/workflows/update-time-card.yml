@@ -3,7 +3,7 @@ name: Update README cards
 on:
   workflow_dispatch:
   schedule:
-    - cron: "*/5 * * * *"  # every 5 minutes (GitHub's practical minimum)
+    - cron: "*/5 * * * *"
 
 permissions:
   contents: write
@@ -12,22 +12,24 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
       - name: Generate SVG cards
         run: |
+          ls -la
+          ls -la scripts || true
           python scripts/gen_cards.py
+          ls -la assets || true
 
       - name: Commit changes
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git status
           git add assets/*.svg
           git commit -m "chore: update README cards" || exit 0
           git push
