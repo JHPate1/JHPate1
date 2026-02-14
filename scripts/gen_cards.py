@@ -142,7 +142,7 @@ def make_skills() -> None:
         bar_w = 420
         fill_w = int(bar_w * (pct / 100))
         rows.append(f"""
-  <text x="56" y="{y}" fill="#e5e7eb" font-size="16" font-weight="700"
+  <text x="56" y="{y}" fill="#e5e7eb" font-size="14" font-weight="700"
         font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial">{esc(name)}</text>
 
   <rect x="56" y="{y+16}" width="{bar_w}" height="12" rx="8" fill="rgba(255,255,255,0.12)"/>
