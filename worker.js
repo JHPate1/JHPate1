@@ -14,7 +14,7 @@ const SITE = "jyot.dev";
 const BG = "#0d1117", BORDER = "#21262d", TRACK = "#161b22";
 const TEXT = "#e6edf3", MUTED = "#8b949e", FAINT = "#6e7681";
 const HEAT = ["#161b22", "#0e4429", "#006d32", "#26a641", "#39d353"];
-const FONT = `-apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif`;
+const FONT = `-apple-system, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif`;
 
 const SKILLS = [["HTML", 70], ["SCSS", 80], ["Bootstrap", 50], ["JavaScript", 65], ["CSS", 75]];
 
