@@ -1,32 +1,31 @@
 /**
  * GitHub Profile Cards — Cloudflare Worker
+ * Live data for @JHPate1
  *
  * Routes:
- *   /time          — live clock card (auto theme by hour)
- *   /time?theme=night — force a theme: morning|afternoon|evening|night|neon|sunset
- *   /stats?repo=owner/name — commit/contributor stats card (uses GitHub API)
- *   /skills        — skills card (edit SKILLS below)
- *   /              — HTML preview page showing all three
+ *   /time    — animated live clock card
+ *   /stats   — live GitHub stats for JHPate1
+ *   /skills  — animated skill bars
+ *   /        — preview page
  */
 
 const TZ = "America/New_York";
-const FONT = "ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial";
+const GITHUB_USER = "JHPate1";
+const FONT = "'Segoe UI', ui-sans-serif, system-ui, -apple-system, Roboto, Arial";
 
 const THEMES = {
-  morning:   ["#0ea5e9", "#22c55e"],
-  afternoon: ["#fb923c", "#f43f5e"],
-  evening:   ["#a855f7", "#6366f1"],
-  night:     ["#0f172a", "#1d4ed8"],
-  neon:      ["#00f5d4", "#9b5de5"],
-  sunset:    ["#ff6b6b", "#ffd166"],
+  morning:   ["#38bdf8", "#34d399", "#fbbf24"],
+  afternoon: ["#fb923c", "#f43f5e", "#fbbf24"],
+  evening:   ["#a855f7", "#6366f1", "#ec4899"],
+  night:     ["#1e3a8a", "#7c3aed", "#06b6d4"],
 };
 
-// Edit these any time
 const SKILLS = [
-  ["HTML", 70],
-  ["SCSS", 80],
-  ["Bootstrap", 50],
-  ["JavaScript", 65],
+  ["HTML", 70, "#e34f26"],
+  ["SCSS", 80, "#cf649a"],
+  ["Bootstrap", 50, "#7952b3"],
+  ["JavaScript", 65, "#f7df1e"],
+  ["CSS", 75, "#38bdf8"],
 ];
 
 // ---------- helpers ----------
@@ -47,10 +46,6 @@ const pickTheme = (hour, override) =>
   : hour >= 17 && hour < 21 ? THEMES.evening
   : THEMES.night;
 
-const svg = (body, w, h, defs = "") =>
-  `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">` +
-  `<defs>${defs}</defs>${body}</svg>`;
-
 const respond = (content, type = "image/svg+xml") =>
   new Response(content, {
     headers: {
@@ -60,115 +55,163 @@ const respond = (content, type = "image/svg+xml") =>
     },
   });
 
-// ---------- cards ----------
+const ghHeaders = () => {
+  const h = { "user-agent": "profile-cards-worker", accept: "application/vnd.github+json" };
+  if (typeof GITHUB_TOKEN !== "undefined") h.authorization = `Bearer ${GITHUB_TOKEN}`;
+  return h;
+};
+
+// ---------- time card ----------
 
 function timeCard(themeOverride) {
   const now = new Date(new Date().toLocaleString("en-US", { timeZone: TZ }));
-  const [c1, c2] = pickTheme(now.getHours(), themeOverride);
+  const [c1, c2, c3] = pickTheme(now.getHours(), themeOverride);
 
   const time = now.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
   const [hhmm, ampm] = time.split(" ");
   const day = now.getDate();
   const dateLine = now.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 
-  const defs = `
+  return `
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="320" viewBox="0 0 600 320" font-family="${FONT}">
+  <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0%" stop-color="${c1}"/>
-      <stop offset="100%" stop-color="${c2}"/>
+      <stop offset="55%" stop-color="${c2}"/>
+      <stop offset="100%" stop-color="${c3}"/>
     </linearGradient>
-    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
-      <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#000" flood-opacity="0.55"/>
-    </filter>`;
+    <radialGradient id="orb" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0%" stop-color="#fff" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#fff" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="blur"><feGaussianBlur stdDeviation="30"/></filter>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="16" stdDeviation="20" flood-color="#000" flood-opacity="0.45"/>
+    </filter>
+  </defs>
 
-  const body = `
-    <rect x="40" y="45" rx="28" width="480" height="210" fill="url(#bg)" filter="url(#glow)"/>
-    <path d="M68 75 C180 20, 380 20, 492 75 L492 105 C380 70, 180 70, 68 105 Z" fill="#fff" opacity="0.12"/>
-    <text x="88" y="155" fill="#fff" font-family="${FONT}" font-size="96" font-weight="800" letter-spacing="-2">${esc(hhmm)}</text>
-    <text x="320" y="155" fill="#fff" font-family="${FONT}" font-size="28" font-weight="700" opacity="0.92">${esc(ampm)}</text>
-    <text x="92" y="200" fill="#fff" font-family="${FONT}" font-size="28" font-weight="600" opacity="0.95">${esc(dateLine)}${ordinal(day)}</text>
-    <text x="92" y="235" fill="#fff" opacity="0.70" font-family="${FONT}" font-size="14">Live • ${esc(TZ)}</text>`;
+  <!-- soft floating glow orbs -->
+  <circle cx="120" cy="80" r="90" fill="${c3}" opacity="0.35" filter="url(#blur)">
+    <animate attributeName="cx" values="120;160;120" dur="8s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="500" cy="240" r="80" fill="${c1}" opacity="0.4" filter="url(#blur)">
+    <animate attributeName="cy" values="240;200;240" dur="10s" repeatCount="indefinite"/>
+  </circle>
 
-  return svg(body, 560, 300, defs);
+  <rect x="40" y="40" rx="32" width="520" height="240" fill="url(#bg)" filter="url(#shadow)"/>
+  <!-- glass sheen -->
+  <path d="M40 100 Q300 20 560 100 L560 72 Q300 -8 40 72 Z" fill="#fff" opacity="0.14"/>
+  <rect x="40" y="40" rx="32" width="520" height="240" fill="none" stroke="#fff" stroke-opacity="0.25" stroke-width="1.5"/>
+
+  <text x="80" y="170" fill="#fff" font-size="92" font-weight="800" letter-spacing="-3">${esc(hhmm)}</text>
+  <text x="330" y="170" fill="#fff" font-size="26" font-weight="700" opacity="0.9">${esc(ampm)}</text>
+
+  <text x="84" y="212" fill="#fff" font-size="26" font-weight="600" opacity="0.95">${esc(dateLine)}${ordinal(day)}</text>
+
+  <g transform="translate(508,62)" fill="#fff" opacity="0.9">
+    <circle cx="10" cy="10" r="10" opacity="0.25">
+      <animate attributeName="r" values="10;14;10" dur="2s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="10" cy="10" r="4" fill="#fff"/>
+  </g>
+
+  <text x="84" y="248" fill="#fff" opacity="0.65" font-size="13" letter-spacing="1">LIVE • ${esc(TZ)} • @JHPate1</text>
+</svg>`;
 }
 
-async function statsCard(url) {
-  let commits = "?", contributors = "?", stars = "?";
-  const m = url.searchParams.get("repo")?.match(/^([\w.-]+)\/([\w.-]+)$/);
+// ---------- stats card (live from GitHub) ----------
 
-  if (m) {
-    const [, owner, repo] = m;
-    const headers = {
-      "user-agent": "profile-cards-worker",
-      accept: "application/vnd.github+json",
-    };
-    // Optional: set a GITHUB_TOKEN secret to avoid rate limits
-    if (typeof GITHUB_TOKEN !== "undefined") headers.authorization = `Bearer ${GITHUB_TOKEN}`;
+async function statsCard() {
+  let followers = "?", repos = "?", totalStars = "?", name = GITHUB_USER;
 
-    const [repoRes, contribRes] = await Promise.all([
-      fetch(`https://api.github.com/repos/${owner}/${repo}`, { headers }),
-      fetch(`https://api.github.com/repos/${owner}/${repo}/contributors?per_page=100`, { headers }),
-    ]);
-    if (repoRes.ok) {
-      const data = await repoRes.json();
-      commits = data.size ?? "?"; // size ≈ KB of repo; use below for real count
-      stars = data.stargazers_count ?? "?";
-    }
-    if (contribRes.ok) {
-      contributors = (await contribRes.json()).length;
-    }
+  const [userRes, repoRes] = await Promise.all([
+    fetch(`https://api.github.com/users/${GITHUB_USER}`, { headers: ghHeaders() }),
+    fetch(`https://api.github.com/users/${GITHUB_USER}/repos?per_page=100&sort=updated`, { headers: ghHeaders() }),
+  ]);
 
-    // Real commit count via link header pagination
-    if (contribRes.ok) {
-      const link = contribRes.headers.get("link") || "";
-      const last = link.match(/[?&]page=(\d+)>; rel="last"/);
-      contributors = last ? Number(last[1]) : 1;
-    }
+  if (userRes.ok) {
+    const u = await userRes.json();
+    followers = u.followers ?? 0;
+    repos = u.public_repos ?? 0;
+    if (u.name) name = u.name;
+  }
+  if (repoRes.ok) {
+    const list = await repoRes.json();
+    totalStars = list.reduce((s, r) => s + (r.stargazers_count || 0), 0);
   }
 
-  const defs = `<linearGradient id="bg" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0%" stop-color="#111827"/>
-      <stop offset="100%" stop-color="#0b1220"/>
-    </linearGradient>`;
+  const stat = (x, label, value, color) => `
+    <circle cx="${x}" cy="130" r="46" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="3"/>
+    <circle cx="${x}" cy="130" r="46" fill="none" stroke="${color}" stroke-width="3"
+            stroke-linecap="round" stroke-dasharray="60 289" transform="rotate(-90 ${x} 130)">
+      <animate attributeName="stroke-dasharray" from="0 289" to="60 289" dur="1.2s" fill="freeze"/>
+    </circle>
+    <text x="${x}" y="126" fill="#fff" font-size="26" font-weight="800" text-anchor="middle">${esc(value)}</text>
+    <text x="${x}" y="148" fill="#94a3b8" font-size="12" text-anchor="middle" letter-spacing="1">${label}</text>`;
 
-  const stat = (x, label, value) => `
-    <text x="${x}" y="115" fill="#e5e7eb" font-size="18" font-family="${FONT}">${label}</text>
-    <text x="${x}" y="150" fill="#fff" font-size="34" font-weight="800" font-family="${FONT}">${esc(value)}</text>`;
+  return `
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="240" viewBox="0 0 720 240" font-family="${FONT}">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e1b4b"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#000" flood-opacity="0.5"/>
+    </filter>
+  </defs>
 
-  const body = `
-    <rect x="20" y="20" rx="22" width="680" height="180" fill="url(#bg)" stroke="rgba(255,255,255,0.08)"/>
-    <text x="52" y="70" fill="#fff" font-size="26" font-weight="800" font-family="${FONT}">GitHub Stats</text>
-    ${stat(52, "Contributors", contributors)}
-    ${stat(260, "Stars", stars)}
-    ${stat(460, "Repo", m ? `${m[1]}/${m[2]}` : "add ?repo=owner/name")}
-    <text x="52" y="182" fill="#9ca3af" font-size="14" font-family="${FONT}">Live from GitHub API</text>`;
+  <rect x="20" y="20" rx="28" width="680" height="200" fill="url(#bg)" filter="url(#shadow)"/>
+  <rect x="20" y="20" rx="28" width="680" height="200" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1.5"/>
+  <path d="M20 80 Q360 0 700 80 L700 48 Q360 -32 20 48 Z" fill="#fff" opacity="0.05"/>
 
-  return svg(body, 720, 220, defs);
+  <text x="52" y="62" fill="#fff" font-size="22" font-weight="800">${esc(name)}</text>
+  <text x="52" y="84" fill="#64748b" font-size="13" letter-spacing="1">GITHUB • LIVE</text>
+
+  ${stat(160, "FOLLOWERS", followers, "#38bdf8")}
+  ${stat(360, "REPOS", repos, "#a855f7")}
+  ${stat(560, "STARS", totalStars, "#fbbf24")}
+
+  <text x="360" y="200" fill="#475569" font-size="11" text-anchor="middle" letter-spacing="1">updated every request • api.github.com</text>
+</svg>`;
 }
 
-function skillsCard() {
-  const defs = `<linearGradient id="bar" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0%" stop-color="#00f5d4"/>
-      <stop offset="100%" stop-color="#9b5de5"/>
-    </linearGradient>`;
+// ---------- skills card ----------
 
-  let y = 74;
-  const rows = SKILLS.map(([name, pct]) => {
-    const barW = 420, fillW = Math.round(barW * pct / 100);
+function skillsCard() {
+  let y = 86;
+  const rows = SKILLS.map(([name, pct, color]) => {
+    const barW = 400, fillW = Math.round(barW * pct / 100);
     const row = `
-      <text x="56" y="${y}" fill="#e5e7eb" font-size="14" font-weight="700" font-family="${FONT}">${esc(name)}</text>
-      <rect x="56" y="${y + 16}" width="${barW}" height="12" rx="8" fill="rgba(255,255,255,0.12)"/>
-      <rect x="56" y="${y + 16}" width="${fillW}" height="12" rx="8" fill="url(#bar)"/>
-      <text x="${56 + fillW + 10}" y="${y + 26}" fill="#fff" font-size="12" font-weight="800" font-family="${FONT}">${pct}%</text>`;
-    y += 58;
+    <text x="60" y="${y}" fill="#e2e8f0" font-size="15" font-weight="700">${esc(name)}</text>
+    <text x="660" y="${y}" fill="#94a3b8" font-size="13" font-weight="700" text-anchor="end">${pct}%</text>
+    <rect x="60" y="${y + 10}" width="${barW}" height="10" rx="5" fill="rgba(255,255,255,0.08)"/>
+    <rect x="60" y="${y + 10}" width="0" height="10" rx="5" fill="${color}">
+      <animate attributeName="width" from="0" to="${fillW}" dur="1s" fill="freeze" calcMode="spline" keySplines="0.25 0.1 0.25 1"/>
+    </rect>`;
+    y += 52;
     return row;
   }).join("");
 
-  const body = `
-    <rect x="20" y="20" rx="22" width="680" height="${Math.max(240, y + 10)}" fill="#282828" stroke="rgba(255,255,255,0.08)"/>
-    <text x="52" y="64" fill="#fff" font-size="20" font-weight="900" font-family="${FONT}">Skills</text>
-    ${rows}`;
+  return `
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="${y + 20}" viewBox="0 0 720 ${y + 20}" font-family="${FONT}">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e1b4b"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#000" flood-opacity="0.5"/>
+    </filter>
+  </defs>
 
-  return svg(body, 720, Math.max(260, y + 30), defs);
+  <rect x="20" y="20" rx="28" width="680" height="${y - 10}" fill="url(#bg)" filter="url(#shadow)"/>
+  <rect x="20" y="20" rx="28" width="680" height="${y - 10}" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1.5"/>
+  <path d="M20 70 Q360 0 700 70 L700 44 Q360 -26 20 44 Z" fill="#fff" opacity="0.05"/>
+
+  <text x="52" y="62" fill="#fff" font-size="22" font-weight="800">Skills</text>
+  ${rows}
+</svg>`;
 }
 
 // ---------- worker ----------
@@ -180,13 +223,13 @@ export default {
       case "/time":
         return respond(timeCard(url.searchParams.get("theme")));
       case "/stats":
-        return respond(await statsCard(url));
+        return respond(await statsCard());
       case "/skills":
         return respond(skillsCard());
       case "/":
         return respond(
-          `<html><body style="background:#111;display:flex;flex-direction:column;gap:16px;align-items:center;padding:24px">
-            <img src="/time" width="560"><img src="/stats" width="720"><img src="/skills" width="720">
+          `<html><body style="background:#0b1020;display:flex;flex-direction:column;gap:20px;align-items:center;padding:32px;font-family:system-ui">
+            <img src="/time" width="600"><img src="/stats" width="720"><img src="/skills" width="720">
           </body></html>`,
           "text/html"
         );
