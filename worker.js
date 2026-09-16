@@ -51,7 +51,7 @@ const TYPING_LINES = [
 const LANG_COLORS = {
   JavaScript: "#f1e05a", TypeScript: "#3178c6", HTML: "#e34c26", CSS: "#563d7c",
   SCSS: "#c6538c", Python: "#3572A5", Java: "#b07219", Shell: "#89e051",
-  C: "#555555", C++: "#f34b7d", Go: "#00ADD8", Rust: "#dea584",
+  C: "#555555", "C++": "#f34b7d", Go: "#00ADD8", Rust: "#dea584",
   PHP: "#4F5D95", Ruby: "#701516", Swift: "#F05138", Kotlin: "#A97BFF",
 };
 
